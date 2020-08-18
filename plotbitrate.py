@@ -31,6 +31,8 @@
 
 __version__ = "1.0.7.1"
 
+import matplotlib
+import matplotlib.pyplot as plt
 import argparse
 import csv
 import datetime
@@ -46,7 +48,6 @@ from enum import Enum
 from typing import Callable, Union, List, IO, Iterable, Optional, Dict, Tuple, \
     Generator
 from frame import Frame
-
 
 class Color(Enum):
     I = "red"
@@ -78,20 +79,20 @@ try:
 except ImportError:
     import xml.etree.ElementTree as eTree  # type: ignore
 
-# check for PyQt5
-if util.find_spec("PyQt5") is None:
-    exit_with_error("Missing package 'PyQt5'")
+# # check for PyQt5
+# if util.find_spec("PyQt5") is None:
+#     exit_with_error("Missing package 'PyQt5'")
 
-# check for matplot lib
-try:
-    import matplotlib  # type: ignore
-    matplotlib.use("Qt5Agg")
-    import matplotlib.pyplot as matplot  # type: ignore
-except ImportError:
-    # satisfy undefined variable warnings
-    matplotlib = None
-    matplot = None
-    exit_with_error("Missing package 'python3-matplotlib'")
+# # check for plt lib
+# try:
+#     import pltlib  # type: ignore
+#     pltlib.use("Qt5Agg")
+#     import pltlib.pyplot as plt  # type: ignore
+# except ImportError:
+#     # satisfy undefined variable warnings
+#     pltlib = None
+#     plt = None
+#     exit_with_error("Missing package 'python3-pltlib'")
 
 # check for ffprobe in path
 if not shutil.which("ffprobe"):
@@ -105,11 +106,11 @@ def parse_arguments() -> argparse.Namespace:
         supported_filetypes = matplotlib.figure.Figure().canvas \
             .get_supported_filetypes().keys()
     else:
-        fig = matplot.figure()
+        fig = plt.figure()
         supported_filetypes = fig.canvas.get_supported_filetypes().keys()
-        matplot.close(fig)
+        plt.close(fig)
 
-    # get list of supported matplotlib formats
+    # get list of supported pltlib formats
     format_list = list(supported_filetypes)
 
     format_list.append("xml_raw")
@@ -482,7 +483,7 @@ def downscale_bitrate(
         yield second, max_b
 
 
-def prepare_matplot(
+def prepare_plt(
         window_title: str,
         duration: int,
         min_y: Optional[int],
@@ -490,28 +491,28 @@ def prepare_matplot(
 ) -> None:
     """ Prepares the chart and sets up a new figure """
 
-    matplot.figure(figsize=[10, 4]).canvas.set_window_title(window_title)
-    matplot.title("Stream Bitrate over Time")
-    matplot.xlabel("Time")
-    matplot.ylabel("Bitrate (kbit/s)")
-    matplot.grid(True, axis="y")
+    plt.figure(figsize=[10, 4]).canvas.set_window_title(window_title)
+    plt.title("Stream Bitrate over Time")
+    plt.xlabel("Time")
+    plt.ylabel("Bitrate (kbit/s)")
+    plt.grid(True, axis="y")
 
     # set 10 x axes ticks
-    matplot.xticks(range(0, duration + 1, max(duration // 10, 1)))
+    plt.xticks(range(0, duration + 1, max(duration // 10, 1)))
 
     # format axes values
-    matplot.gcf().axes[0].xaxis.set_major_formatter(
+    plt.gcf().axes[0].xaxis.set_major_formatter(
         matplotlib.ticker.FuncFormatter(
             lambda x, loc: datetime.timedelta(seconds=int(x))))
-    matplot.gca().get_yaxis().set_major_formatter(
+    plt.gca().get_yaxis().set_major_formatter(
         matplotlib.ticker.FuncFormatter(
             lambda x, loc: "{:,}".format(int(x))))
 
     # set y-axis limits if requested
     if min_y:
-        matplot.ylim(ymin=min_y)
+        plt.ylim(ymin=min_y)
     if max_y:
-        matplot.ylim(ymax=max_y)
+        plt.ylim(ymax=max_y)
 
 
 def add_stacked_areas(
@@ -547,7 +548,7 @@ def add_stacked_areas(
         sums_of_values = values_max
         color = Color[frame_type].value if frame_type in dir(Color) \
             else Color.FRAME.value
-        bars[frame_type] = matplot.fill_between(
+        bars[frame_type] = plt.fill_between(
             seconds, values_min, values_max, linewidth=0.5, color=color,
             zorder=2
         )
@@ -573,8 +574,8 @@ def add_area(
     seconds = list(bitrates.keys())
     values = list(bitrates.values())
     color = Color.AUDIO.value if stream_type == "audio" else Color.FRAME.value
-    matplot.plot(seconds, values, linewidth=0.5, color=color)
-    matplot.fill_between(seconds, 0, values, linewidth=0.5, color=color,
+    plt.plot(seconds, values, linewidth=0.5, color=color)
+    plt.fill_between(seconds, 0, values, linewidth=0.5, color=color,
                          zorder=2)
     return bitrate_max, bitrate_mean
 
@@ -585,12 +586,12 @@ def draw_horizontal_line_with_text(
         text: str
 ) -> None:
     # calculate line position (above line)
-    text_x = matplot.xlim()[1] * pos_h_percent
-    text_y = pos_y + ((matplot.ylim()[1] - matplot.ylim()[0]) * 0.015)
+    text_x = plt.xlim()[1] * pos_h_percent
+    text_y = pos_y + ((plt.ylim()[1] - plt.ylim()[0]) * 0.015)
 
     # draw as think black line with text
-    matplot.axhline(pos_y, linewidth=1.5, color="black")
-    matplot.text(
+    plt.axhline(pos_y, linewidth=1.5, color="black")
+    plt.text(
         text_x, text_y, text,
         horizontalalignment="center", fontweight="bold", color="black"
     )
@@ -620,7 +621,7 @@ def main():
         save_raw_csv(frames, args.output)
         sys.exit(0)
 
-    prepare_matplot(args.input, duration, args.min, args.max)
+    prepare_plt(args.input, duration, args.min, args.max)
 
     legend = None
     if args.show_frame_types and args.stream == "video":
@@ -643,14 +644,14 @@ def main():
     )
 
     if legend:
-        matplot.legend(legend.values(), legend.keys(), loc="upper right")
+        plt.legend(legend.values(), legend.keys(), loc="upper right")
 
     # render graph to file (if requested) or screen
     if args.output:
-        matplot.savefig(args.output, format=args.format, dpi=300)
+        plt.savefig(args.output, format=args.format, dpi=300)
     else:
-        matplot.tight_layout()
-        matplot.show()
+        plt.tight_layout()
+        plt.show()
 
 
 if __name__ == "__main__":
