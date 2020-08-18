@@ -648,7 +648,7 @@ def main():
 
     # render graph to file (if requested) or screen
     if args.output:
-        plt.savefig(args.output, format=args.format, dpi=300)
+        plt.savefig(args.output, format=args.format, dpi=100)
     else:
         plt.tight_layout()
         plt.show()
